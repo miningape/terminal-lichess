@@ -1,7 +1,7 @@
 import requests   # HTTP REQUEST PACK
 import json       # JSON INTERPRETING PACK
 
-class apu():
+class lichessReq():
   game_flag = False
   main_flag = False
   URL = 'https://lichess.org/api'
@@ -89,7 +89,7 @@ class apu():
 
 
 if __name__ == '__main__':
-  api = apu()
+  api = lichessReq()
   #threading.Thread(target=gameState).start()
   #threading.Timer(5, print, args=(l,)).start()
   #api.gameState( print, print )
