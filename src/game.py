@@ -54,6 +54,7 @@ class ChessBoardDisplay(npyscreen.SimpleGrid):
 # Main Menu / Landing Menu
 class menuForm(template.CustomMenu):
   num_ongoing_games = 0
+  # Event stream handler
   def generalJSON(self, json):
     req = json['type']
     
@@ -66,7 +67,8 @@ class menuForm(template.CustomMenu):
       self.output.value = '\nIt looks like are {} games that have already started.\nTo join open the menu (ctrl+X), and select "Join Ongoing Game"'.format(self.num_ongoing_games)
       self.menu.addItem(gameID, self.switch_and_join, None, arguments=(gameID,)) 
       self.display()
-    
+   
+  # Functions that output text to the user
   def usage(self):
     npyscreen.notify_confirm('To Use This Client: you will need to start a bot game. After starting the game you should see a large chess board in front of you.\n-----\nTo make a move type the move in the black box in the bottom left. The format for these moves is square from square to, and letter before number. For example to move a piece from the e1 square to e2, you would type "e1e2", without quotation marks.\n-----\nCastling is handled by typing the square the king lands on as the square to (e.g. "e1g1").\n-----\nWe have tried to guess what color the player is and set the board up from their perspective, however this doesn\'t mean that it is always correct, to flip the board, select the menu and then "flip board".\n-----\nTo resign/draw a game, select resign/draw in the menu, confirming a draw is done in the same way offering a draw is.\n-----\nThe pieces are as follows:\nK:\tKing \nQ:\tQueen\nB:\tBishop\nN:\tKnight\nR:\tRook\nP:\tPawn', wide=True, title="Tutorial")
   
@@ -79,12 +81,15 @@ class menuForm(template.CustomMenu):
   def lichess(self):
     npyscreen.notify_confirm('Lila (li[chess in sca]la) is a free (open-source) online chess game server focused on realtime gameplay and ease of use.\n-----\nIt features a search engine, computer analysis distributed with fishnet, tournaments, simuls, forums, teams, tactic trainer, a mobile app, and a shared analysis board.\n-----\nLichess is written in Scala 2.13, and relies on the Play 2.8 framework. scalatags is used for templating. Pure chess logic is contained in the scalachess submodule. The server is fully asynchronous.', wide=True, title="LiChess.org Info")
   
-
+  # semi-constructor that handles the adding of all the elements that can be seen
   def create(self):
+      # Adding output text
       self.logo = self.add(npyscreen.MultiLineEdit, editable=False, height=12)
       self.output = self.add(npyscreen.MultiLineEdit, value="", editable=False, height=3)
       self.add(npyscreen.MultiLineEdit, value="", editable=False, height=3)
       self.add(npyscreen.MultiLineEdit, value="This Version (1.0.4) Does Not Support Player to Player games, or custom API keys", editable=False, height=3, color='WARNING')
+      
+      # Adding menu options
       self.menu = self.add_menu(name="Join Ongoing Game", shortcut="j")
       #self.res_menu = self.add_menu(name="Resign Ongoing Game", shortcut="r")
 
@@ -110,13 +115,14 @@ class menuForm(template.CustomMenu):
                         "▐░█▄▄▄▄▄▄▄▄▄  ▄▄▄▄█░█▄▄▄▄ ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌       ▐░▌▐░█▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄█░▌ ▄▄▄▄▄▄▄▄▄█░▌\n"\
                         "▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░▌       ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌\n"\
                         " ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀  ▀         ▀  ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀ "
-  
+  # Switch form and join specific game
   def switch_and_join(self, gameID):
     self.parentApp.switchForm('GAME')
-    self.parentApp.getForm('GAME').GAMEID = gameID
-    self.parentApp.getForm('GAME').START_GAME_THREAD()
+    self.parentApp.getForm('GAME').GAMEID = gameID      # Set the game id to the game we want
+    self.parentApp.getForm('GAME').START_GAME_THREAD()  # Start the game stream thread on the ID we just set
     self.parentApp.curForm = 'GAME'
-      
+  
+  # Buttons at the bottom of the screen overrides
   def on_exit(self):
     self.parentApp.setNextForm(None)
   
@@ -127,12 +133,14 @@ class menuForm(template.CustomMenu):
   def on_settings(self):
     print('settings is broken')
 
+ # This is where the actual game logic takes place
 class mainForm(template.CustomForm):
   movesMade = ''
   playingGame = False
   GAMEID = None
   GameCompleteFlag = False
 
+  # Button overrides
   def on_ok(self):
     # Close general io threading
     self.CLOSE_GAME_THREAD()
@@ -149,11 +157,13 @@ class mainForm(template.CustomForm):
     self.CLOSE_GAME_THREAD()
     self.parentApp.switchForm(None)
 
+  # Game Thread Helper Functions
   def CLOSE_GAME_THREAD(self):
     if self.playingGame:
       lapi.game_flag = True
       self.game_thread.join()
     #Otherwise thread closes itself
+    
   def START_GAME_THREAD(self):
     self.game_thread = threading.Thread(target=lapi.gameState, args=( self.handleJSON, self.firstHandleJSON, self.GAMEID, ))
     self.playingGame = True      
@@ -166,6 +176,7 @@ class mainForm(template.CustomForm):
     self.outputText.value = 'Disconnected'
     # Thread closes itself as the connection closes when the game does
 
+  # Game stream handler (every time but the first)
   def handleJSON(self, json):
     status = json['status']
     if status != 'started':
@@ -189,12 +200,14 @@ class mainForm(template.CustomForm):
       self.latestMove = listOMoves.split()[-1]
       self.movesMade = listOMoves
       self.move_and_update(self.latestMove)
-    
+  
+  # Game stream handler for the initial response from the game stream (this is because this response and all folowing responses have a different JSON structure)
   def firstHandleJSON(self, json):
     self.gameInfoText.value = 'Game (ID: {}) In Play'.format(json['id'])
     self.latestMove = json['state']['moves'].split()[-1] if json['state']['moves'] != "" else "Nothing, Your Move"
     self.many_move(json['state']['moves'])
   
+  # Event Stream Handler
   def generalJSON(self, json):
     # Figure out what kind of request we recieved
     req = json['type']
@@ -215,33 +228,40 @@ class mainForm(template.CustomForm):
         else:
           self.GameCompleteFlag = True
 
+  # Move a piece on the board, and then tell npyscreen to draw the screen again
   def move_and_update(self, move):
     g_chessState.make_move(move)
     self.outputText.value = 'Last move: {}'.format(move)
     self.display()
 
+  # Make several moves in a row (generally only called at the beginning of the game as the api doesnt garantee the first connection only contains one move)
   def many_move(self, moves):
     self.outputText.value = 'GAME STARTED!\nCurrent moves are {}'.format(moves)
     g_chessState.start(moves)
     self.movesMade = moves
     self.display()
   
+  # Helper function to resign
   def resignGame(self):
     lapi.resignGame(self.GAMEID)
-  
+   
+  # Show all the moves made throughout the game
   def showMoves(self):
     npyscreen.notify_confirm( self.movesMade, title="Moves Made", editw=1 )
   
+  # Helper to show that a feature has been disabled
   def showBroken(self):
     npyscreen.notify_confirm( "Sorry Action Unavailable", title="Error", editw=1, form_color="DANGER" )
 
+  # Pseudo constructor that adds elements to the screen
   def create(self):
-    # Custom menu keybind
+    # Custom menu keybind not really important we were just messing with it (ctrl-x is preffered over ctrl-g)
     self.add_handlers({'^G': self.root_menu})
 
     # Actual board display
     self.mygrid = self.add(ChessBoardDisplay, name="Something", columns=10, column_width=7 , row_height=3, col_margin=0, editable=False )
 
+    # Text elements to output to
     self.outputText = self.add(npyscreen.MultiLineEdit, value="keybind: ^X", relx = 80, rely=10, editable=False)
     self.outputText.value = "Not Playing" if not self.playingGame else "Playing, this text shouldnt be here"
     self.gameInfoText = self.add(npyscreen.MultiLineEdit, value="", relx = 80, rely=15, editable=False, color='GOOD')
@@ -265,9 +285,12 @@ class mainForm(template.CustomForm):
         cur_row.append(cur_cell) 
       self.mygrid.values.append(cur_row)
 
+# Form for selecting color/difficulty
 class gameSetup(template.NETWORKEDFORM):
-  MAP = ['random', 'black', 'white']
+  MAP = ['random', 'black', 'white']      # Map between selected value and what the api expects
 
+  # Event stream handler (again) this time it waits for a game to start, once it does it changes the form to the game screen and changes the gameID to the correct on
+  # Not the best way to handle the creation of a game as if you create a game, then during the processing of that request another game is started you will be sent to the other game
   def generalJSON( self, json ):
     req = json['type']
     
@@ -278,16 +301,18 @@ class gameSetup(template.NETWORKEDFORM):
       # Very hacky code, should probably make an explicit method to add to ongoing game list, rather than just propegating the call
       self.parentApp.getForm('MAIN').generalJSON(json)
       self.parentApp.getForm('GAME').generalJSON(json)
-      
+  
+  # Button overrides
   def on_cancel(self):
     self.parentApp.switchForm('MAIN')
     self.parentApp.curForm = 'MAIN'
   
   def on_ok(self):
-    self.createText.hidden = False
-    lapi.makAIGame( int(self.difficulty.value), self.MAP[self.choice.value[0]] )
-    g_chessState.setState( self.MAP[ self.choice.value[0] ] )
+    self.createText.hidden = False    # Show "creating game..."
+    lapi.makAIGame( int(self.difficulty.value), self.MAP[self.choice.value[0]] )    # Create a request on the api to start a game
+    g_chessState.setState( self.MAP[ self.choice.value[0] ] )                       # Set the orientation of the board
 
+  # Pseudo contsructor adding elements to the screen
   def create(self):
     self.difficulty = self.add(npyscreen.TitleSlider, out_of=8, step=1, lowest=1, name='Difficulty', value=1)
     self.add(npyscreen.Textfield, editable=False)
@@ -295,6 +320,7 @@ class gameSetup(template.NETWORKEDFORM):
     #self.add(npyscreen.Textfield, editable=False)
     self.createText = self.add(npyscreen.Textfield, value="Creating Game...", hidden=True, editable=False, color="GOOD")
 
+# Actual app
 class App(npyscreen.NPSAppManaged):
   curForm = 'MAIN'
   
