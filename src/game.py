@@ -12,7 +12,7 @@ import helper               # Helper Methods class
 
 # Globals that need to be shared across all forms/threads/widgets
 # ! Needs Refactoring: Ideally it would be in App(), this code was written to make it easy
-lapi = api.apu()
+lapi = api.lichessReq()
 g_chessState = chess.ChessState()
 
 # ! Should be in template.py, but it relies on g_chessState, so it stays here until further notice
