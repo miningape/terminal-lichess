@@ -183,6 +183,7 @@ class mainForm(template.CustomForm):
       self.gameMSG = status
       if self.latestMove != json['moves'][-4:]:
         self.movesMade = json['moves']
+        self.latestMove = self.movesMade.split()[-1]
         self.move_and_update(self.latestMove)
 
       if 'winner' in json:
