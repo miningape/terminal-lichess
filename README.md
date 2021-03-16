@@ -11,3 +11,9 @@ Because the lichess api only allows one connection to a URI from a single API ke
 pip install npyscreen
 pip install windows-curses
 ```
+
+# Running
+```terminal
+cd src/
+python game.py
+```
